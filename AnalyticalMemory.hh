@@ -44,6 +44,7 @@ class PendingMemoryRequest {
 
   uint64_t tensor_size;
   AstraSim::WorkloadLayerHandlerData* wlhd;
+  bool demand_restore = false;
 };
 
 class AnalyticalMemory : public AstraSim::AstraMemoryAPI, public AstraSim::Callable{
@@ -54,6 +55,8 @@ class AnalyticalMemory : public AstraSim::AstraMemoryAPI, public AstraSim::Calla
       uint64_t tensor_size,
       AstraSim::WorkloadLayerHandlerData* wlhd);
   void call(AstraSim::EventType type, AstraSim::CallData* data);
+  bool prioritize_restore(AstraSim::Workload* workload, uint32_t iteration,
+                          int64_t transfer_id, uint32_t device_id) override;
   uint64_t get_mem_runtime(uint64_t tensor_size);
   AstraSim::MemoryLocationType get_memory_location_type() const override { return mem_loc_type; }
 

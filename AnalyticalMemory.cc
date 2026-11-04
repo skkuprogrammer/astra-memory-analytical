@@ -199,6 +199,35 @@ void AnalyticalMemory::issue(
   }
 }
 
+bool AnalyticalMemory::prioritize_restore(
+    Workload* workload, uint32_t iteration, int64_t transfer_id, uint32_t device_id) {
+  if (transfer_id < 0 || device_id >= pending_requests.size()) {
+    return false;
+  }
+  auto& queue = pending_requests[device_id];
+  for (auto it = queue.begin(); it != queue.end(); ++it) {
+    const auto* data = it->wlhd;
+    if (data->workload != workload || data->restore_iteration != iteration ||
+        data->restore_transfer_id != transfer_id) {
+      continue;
+    }
+    if (it->demand_restore) {
+      return false; // Repeated attention checks preserve demand FIFO order.
+    }
+    auto request = *it;
+    request.demand_restore = true;
+    queue.erase(it);
+    auto position = queue.begin();
+    while (position != queue.end() && position->demand_restore) {
+      ++position;
+    }
+    queue.insert(position, request);
+    return true;
+  }
+  // Active requests are absent from the queue; their event times stay intact.
+  return false;
+}
+
 void AnalyticalMemory::call(EventType type, CallData* data) {
   WorkloadLayerHandlerData* wlhd = (WorkloadLayerHandlerData*)data;
   int device_id = wlhd->device_id;
